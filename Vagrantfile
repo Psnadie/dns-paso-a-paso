@@ -20,4 +20,5 @@ Vagrant.configure("2") do |config|
   # Hago el prosionamiento con el script bootstrap.sh
   config.vm.provision "shell", path: "bootstrap.sh"
 
+  end
 end
