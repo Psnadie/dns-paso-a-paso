@@ -1,7 +1,7 @@
-# Documentación: Configuración del Servidor DNS
+# Configuración del Servidor DNS
 
-**Autor:** Nicolás  
-**Fecha:** 15 de Octubre de 2024  
+**Autor:** Nicolás Esteban Lopez Novoa
+**Curso:** Desarrollo De Aplicaciones Web 2 Año 
 **Zona DNS:** nicolas.test  
 **Red:** 192.168.57.0/24  
 **IP Servidor:** 192.168.57.10
@@ -22,7 +22,7 @@
 ## 1. Preparación del Entorno
 
 ### 1.1 Estructura del Proyecto
-Se creó la siguiente estructura de directorios:
+Se creó la estructura de directorios:
 ```
 dns-paso-a-paso/
 ├── README.md
@@ -99,14 +99,7 @@ options {
 };
 ```
 
-**Aspectos importantes:**
-- `acl confiables`: Define qué redes pueden hacer consultas recursivas
-- `listen-on`: El servidor escucha en la IP 192.168.57.10
-- `recursion yes`: Permite consultas recursivas
-- `allow-recursion`: Solo la ACL "confiables" puede hacer consultas recursivas
-- `allow-transfer { none; }`: No se permiten transferencias de zona
-
-### 3.2 Verificación de Configuración
+### 3.2 Verificación de la configuracion
 ```bash
 named-checkconf /etc/bind/named.conf.options
 ```
@@ -217,17 +210,17 @@ dig @192.168.57.10 debian.nicolas.test
 debian.nicolas.test. 86400 IN A 192.168.57.10
 ```
 
+Mi resultado:
+![Texto alternativo](images/Consulta_dig.png)
+
 **Consulta inversa:**
 ```bash
 dig @192.168.57.10 -x 192.168.57.10
 ```
+Mi resultado:
+![Texto alternativo](images/Consulta_Inversa_Dig.png)
 
 ### 6.2 Prueba con nslookup
-
-**Consulta directa:**
-```bash
-nslookup debian.nicolas.test 192.168.57.10
-```
 
 **Resultado esperado:**
 ```
@@ -238,13 +231,16 @@ Name:   debian.nicolas.test
 Address: 192.168.57.10
 ```
 
+Mi resultado:
+![Texto alternativo](images/Consulta_nslookup.png)
+
 ---
 
 ## 7. Cuestiones Finales
 
 ### 7.1 ¿Qué pasará si un cliente de una red diferente intenta usar el DNS?
 
-**Respuesta:** No le funcionará. Un cliente de otra red no podrá hacer consultas recursivas a nuestro servidor DNS porque está configurado para permitir consultas recursivas solo a la red 192.168.57.0/24, definida en la ACL "confiables".
+No le funcionará. Un cliente de otra red no podrá hacer consultas recursivas a nuestro servidor DNS porque está configurado para permitir consultas recursivas solo a la red 192.168.57.0/24, definida en la ACL "confiables".
 
 Esto se puede ver en la configuración de `named.conf.options`:
 ```
@@ -255,21 +251,20 @@ acl confiables {
 allow-recursion { confiables; };
 ```
 
-El cliente recibiría una respuesta de tipo "query refused" o "recursion denied".
 
 ### 7.2 ¿Por qué tenemos que permitir las consultas recursivas?
 
-**Respuesta:** Las consultas recursivas son necesarias cuando nuestro servidor DNS recibe una petición de un dominio del cual no es autoritativo. En ese caso, el servidor DNS debe:
+Son necesarias cuando nuestro servidor DNS recibe una petición de un dominio del cual no es autoritativo. En ese caso, el servidor tiene que:
 
-1. Consultar a otros servidores DNS (empezando por los root servers)
+1. Consultar a otros servidores DNS
 2. Seguir las referencias hasta obtener la respuesta
 3. Devolver la respuesta al cliente
 
-Sin recursión habilitada, el servidor solo podría responder consultas sobre zonas de las que es autoritativo (nicolas.test en nuestro caso), pero no podría resolver nombres como "google.com" o cualquier otro dominio externo.
+Sin recursión, el servidor solo podría responder consultas sobre zonas de las que es autoritativo (como nicolas.test en mi caso), pero no podría resolver nombres como "google.com" o cualquier otro dominio externo.
 
 ### 7.3 ¿El servidor DNS es autoritativo? ¿Por qué?
 
-**Respuesta:** Sí, nuestro servidor DNS es autoritativo para la zona "nicolas.test" y para la zona inversa "57.168.192.in-addr.arpa".
+Sí, el servidor DNS es autoritativo para la zona "nicolas.test" y para la zona inversa "57.168.192.in-addr.arpa".
 
 Es autoritativo porque:
 1. Se declaró como `type master` en la configuración
@@ -277,89 +272,81 @@ Es autoritativo porque:
 3. Es la fuente de información oficial para esos dominios
 4. Tiene el registro SOA (Start of Authority) que lo identifica como autoritativo
 
-Sin embargo, NO es autoritativo para otros dominios (como google.com), para esos actuaría como DNS recursivo.
-
 ### 7.4 ¿Dónde encontramos la directiva $ORIGIN y para qué sirve?
 
-**Respuesta:** La directiva `$ORIGIN` se puede encontrar en los archivos de zona DNS (archivos .dns y .rev).
+El `$ORIGIN` se puede encontrar en los archivos de zona DNS (archivos .dns y .rev).
 
-**Función:** Define el dominio base para los nombres relativos en el archivo de zona. Si no se especifica explícitamente, `$ORIGIN` toma el valor del nombre de zona especificado en `named.conf.local`.
+**Función:** Define el dominio base para los nombres relativos en el archivo de zona. Si no se especifica directamente, `$ORIGIN` toma el valor del nombre de zona especificado en `named.conf.local`.
 
-En nuestro caso:
-- Para `nicolas.test.dns`: $ORIGIN sería `nicolas.test.`
-- Para `nicolas.test.rev`: $ORIGIN sería `57.168.192.in-addr.arpa.`
-
-**Ejemplo de uso:**
-```
-$ORIGIN nicolas.test.
-www     IN  A  192.168.57.20
-```
-Esto se interpreta como: `www.nicolas.test. IN A 192.168.57.20`
+En este caso:
+- Para `nicolas.test.dns`: $ORIGIN es `nicolas.test.`
+- Para `nicolas.test.rev`: $ORIGIN es `57.168.192.in-addr.arpa.`
 
 ### 7.5 ¿Una zona es idéntico a un dominio?
 
-**Respuesta:** No son idénticos, aunque están relacionados.
+**No son idénticos, aunque tienen algo de relacion.** 
 
-**Dominio:** Es un nombre en el espacio de nombres DNS (ejemplo: nicolas.test, google.com)
+**Un dominio:** Es un nombre en el espacio de nombres DNS (ejemplo: nicolas.test, google.com)
 
-**Zona:** Es una porción del espacio de nombres DNS que está bajo control administrativo de un servidor DNS específico. Una zona contiene:
+**Una zona:** Es una porción del espacio de nombres DNS que está bajo control de un servidor DNS específico, Esta contiene:
 - Los archivos de configuración
 - Los registros DNS
 - La información autoritativa de uno o más dominios
 
-**Diferencias clave:**
-- Un dominio puede estar dividido en múltiples zonas (subdelegación)
+**Diferencias:**
+- Un dominio puede estar dividido en múltiples zonas
 - Una zona puede contener múltiples dominios
-- La zona es el concepto administrativo, el dominio es el concepto lógico
 
-**Ejemplo:** El dominio `empresa.com` podría tener:
+**Por ejemplo:** El dominio `empresa.com` podría tener:
 - Zona principal: `empresa.com`
 - Subzona delegada: `ventas.empresa.com` (gestionada por otro servidor DNS)
 
+asi que se podria decir que el dominio es el nombre, y la zona es la "base de datos" que dice que hacer con ese nombre.
+
 ### 7.6 ¿Cuántos servidores raíz existen?
 
-**Respuesta:** Existen **13 servidores raíz** identificados con letras de la A a la M:
+Existen **13 servidores raíz** con letras de la A a la M:
 - a.root-servers.net
 - b.root-servers.net
 - c.root-servers.net
 - ... hasta ...
 - m.root-servers.net
 
-**Nota importante:** Aunque son 13 "nombres", cada uno está implementado mediante múltiples servidores físicos distribuidos geográficamente usando tecnología Anycast. En total hay cientos de servidores físicos, pero se presentan como 13 direcciones IP.
+**Dato importante:** Aunque son 13 "nombres", cada uno está implementado mediante múltiples servidres físicos distribuidos en sitios diferentes usando Anycast. En total hay cientos de servidores físicos, pero se presentan como 13 direcciones IP.
 
 ### 7.7 ¿Qué es una consulta iterativa de referencia?
 
-**Respuesta:** Una consulta iterativa (o no recursiva) es aquella en la que el servidor DNS responde con:
+Una consulta iterativa (o no recursiva) es aquella en la que el servidor DNS responde con:
 - La mejor información que tiene en ese momento, O
 - Una referencia a otro servidor DNS que podría tener la respuesta
 
 **Proceso:**
-1. Cliente pregunta a servidor local por `www.ejemplo.com`
+1. Cliente pregunta a servidor local por `www.google.com`
 2. Servidor local no tiene la respuesta
 3. Servidor local pregunta al root server (consulta iterativa)
 4. Root server responde: "No sé, pero pregunta al servidor de .com"
 5. Servidor local pregunta al servidor de .com (consulta iterativa)
-6. Servidor de .com responde: "No sé, pero pregunta al servidor de ejemplo.com"
-7. Servidor local pregunta al servidor de ejemplo.com
-8. Este responde con la IP de www.ejemplo.com
+6. Servidor de .com responde: "No sé, pero pregunta al servidor de google.com"
+7. Servidor local pregunta al servidor de google.com
+8. Este responde con la IP de www.google.com
 9. Servidor local devuelve la respuesta al cliente original
 
 **Diferencia con consulta recursiva:**
 - **Recursiva:** El servidor hace todo el trabajo y devuelve la respuesta final
-- **Iterativa:** El servidor devuelve referencias y el cliente debe hacer las consultas sucesivas
+- **Iterativa:** El servidor devuelve referencias y el cliente debe hacer las consultas una tras otra para llegar a la respuesta
 
 ### 7.8 En una resolución inversa, ¿a qué nombre se mapearía la IP 172.16.34.56?
 
-**Respuesta:** En una resolución inversa, la IP 172.16.34.56 se mapearía al nombre de zona:
+En una resolución inversa, la IP 172.16.34.56 se mapearía al nombre de zona:
 
 **`56.34.16.172.in-addr.arpa`**
 
-**Explicación:**
+**Porque:**
 1. Se toma la dirección IP: 172.16.34.56
 2. Se invierte el orden de los octetos: 56.34.16.172
-3. Se añade el sufijo especial: `.in-addr.arpa`
+3. Se añade el: `.in-addr.arpa`
 
-El archivo de zona inversa correspondiente sería `34.16.172.in-addr.arpa` (para toda la red 172.16.34.0/24), y dentro de ese archivo habría un registro PTR:
+El archivo de zona inversa correspondiente sería `34.16.172.in-addr.arpa` (para toda la red 172.16.34.0/24), y dentro de ese archivo habría un registro:
 
 ```
 56  IN  PTR  nombre-del-host.dominio.com.
